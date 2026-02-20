@@ -735,6 +735,29 @@
     </style>
 </head>
 <body>
+    <div id="debug-log" style="position: fixed; top: 10px; left: 10px; width: 80%; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.8); color: lime; font-family: monospace; z-index: 9999; font-size: 16px; text-align: left; padding: 10px; pointer-events: none; border: 2px solid red;">Waiting for debug...</div>
+    <script>
+        window.onerror = function(msg, url, line) {
+            const d = document.getElementById('debug-log');
+            if(d) d.innerHTML += "ERR: " + msg + " (" + line + ")<br>";
+        };
+        const oldErr = console.error;
+        console.error = function(...args) {
+            const d = document.getElementById('debug-log');
+            if(d) d.innerHTML += "C_ERR: " + args.join(' ') + "<br>";
+            oldErr.apply(console, args);
+        };
+        const oldLog = console.log;
+        console.log = function(...args) {
+            const d = document.getElementById('debug-log');
+            if(d) d.innerHTML += "LOG: " + args.join(' ') + "<br>";
+            oldLog.apply(console, args);
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            const d = document.getElementById('debug-log');
+            if(d) d.innerHTML += "PROMISE_ERR: " + (event.reason ? event.reason.message || event.reason : "Unknown") + "<br>";
+        });
+    </script>
     <div class="realistic-bg">
         <div class="r-sky"></div>
         <div class="r-garden"></div>
