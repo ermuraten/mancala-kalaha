@@ -671,65 +671,81 @@
             body {
                 padding: 10px;
                 font-size: 14px;
+                overflow-x: hidden;
             }
             h1 {
-                font-size: 2em;
+                font-size: 1.8em;
                 margin-top: 10px;
             }
             .controls-area {
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 10px;
-                margin-bottom: 20px;
+                gap: 8px;
+                margin-bottom: 15px;
+                width: 100%;
+                max-width: 100vw;
+                box-sizing: border-box;
+                padding: 0 5px;
             }
             #player-name-input {
                 width: 100% !important;
+                max-width: 100% !important;
                 margin-right: 0 !important;
                 margin-bottom: 5px;
                 text-align: center;
+                box-sizing: border-box;
             }
             .theme-switch-btn, .restart-btn {
                 margin: 0;
-                padding: 10px 15px;
-                font-size: 0.9em;
+                padding: 8px 12px;
+                font-size: 0.85em;
                 flex: 1 1 auto;
+                min-width: 0;
+                white-space: nowrap;
             }
             .board-container {
-                margin-top: 20px;
+                margin-top: 10px;
+                width: 100%;
+                display: flex;
+                justify-content: center;
             }
             .board {
-                padding: 15px;
+                padding: 10px 8px;
                 border-radius: 25px;
-                flex-direction: row; /* Ensure row direction even if squeezed */
-                width: 100%;
-                overflow-x: auto; /* Allow scrolling if it still overflows */
+                max-width: calc(100vw - 20px);
                 box-sizing: border-box;
-                justify-content: flex-start; /* Prevent center overflow clipping */
+                justify-content: center;
             }
             .store {
-                min-width: 45px;
-                width: 45px;
-                height: 150px;
-                margin: 0 10px;
-                font-size: 1.8em;
+                min-width: 38px;
+                width: 38px;
+                height: 130px;
+                margin: 0 6px;
+                font-size: 1.5em;
                 border-radius: 20px;
             }
             .rows {
-                gap: 10px;
+                gap: 8px;
+                flex: 1;
+                min-width: 0;
             }
             .row {
-                gap: 6px;
+                gap: 4px;
+                justify-content: center;
+                padding: 5px;
             }
             .pit {
-                min-width: 40px;
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
+                min-width: 0;
+                width: calc((100vw - 130px) / 6);
+                max-width: 50px;
+                height: calc((100vw - 130px) / 6);
+                max-height: 50px;
+                font-size: 1.1rem;
             }
             .row-label {
                 font-size: 0.7em;
-                margin: 5px 0;
+                margin: 3px 0;
             }
             body.realistic-mode .real-stone {
                 width: 10px;
@@ -744,19 +760,72 @@
             }
             .emoji-grid {
                 grid-template-columns: repeat(5, 1fr);
-                font-size: 1.5em; /* Bigger emojis for touch */
+                font-size: 1.5em;
+            }
+            .connection-status {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                padding: 6px 12px;
+                font-size: 0.75em;
+            }
+            #status {
+                font-size: 1em;
+                padding: 8px 16px;
+            }
+            .game-event-osd {
+                font-size: 1.8em;
+                width: 85%;
+                padding: 15px 20px;
+            }
+            .rules {
+                margin: 20px auto;
+                padding: 20px;
             }
         }
         
         @media (max-width: 500px) {
-            .store { min-width: 40px; width: 40px; height: 120px; margin: 0 5px; font-size: 1.5em; border-radius: 15px; }
-            .pit { min-width: 32px; width: 32px; height: 32px; font-size: 1em; }
-            .row { gap: 4px; }
+            .store {
+                min-width: 32px;
+                width: 32px;
+                height: 110px;
+                margin: 0 4px;
+                font-size: 1.3em;
+                border-radius: 15px;
+            }
+            .pit {
+                width: calc((100vw - 100px) / 6);
+                max-width: 42px;
+                height: calc((100vw - 100px) / 6);
+                max-height: 42px;
+                font-size: 0.95em;
+            }
+            .row { gap: 3px; padding: 3px; }
             .rows { gap: 5px; }
-            body.realistic-mode .board { transform: rotateX(25deg) !important; padding: 10px; }
+            .board { padding: 8px 5px; border-radius: 20px; }
+            body.realistic-mode .board { transform: rotateX(25deg) !important; padding: 8px 5px; }
             body.realistic-mode .board.flipped { transform: rotateX(25deg) rotateZ(180deg) !important; }
             body.realistic-mode .real-stone { width: 8px; height: 6px; }
-            .game-event-osd { font-size: 1.8em; width: 90%; padding: 15px 20px; }
+        }
+
+        @media (max-width: 360px) {
+            .store {
+                min-width: 28px;
+                width: 28px;
+                height: 95px;
+                margin: 0 3px;
+                font-size: 1.1em;
+                border-radius: 12px;
+            }
+            .pit {
+                width: calc((100vw - 85px) / 6);
+                max-width: 36px;
+                height: calc((100vw - 85px) / 6);
+                max-height: 36px;
+                font-size: 0.85em;
+            }
+            .board { padding: 6px 4px; }
+            h1 { font-size: 1.5em; }
         }
 
     </style>
@@ -800,7 +869,7 @@
 
     <div id="game-event-osd" class="game-event-osd">Extrazug!</div>
     <div class="controls-area">
-        <input type="text" id="player-name-input" placeholder="Dein Name..." class="chat-input" style="width: 150px; display: inline-block; padding: 8px 15px; margin-right: 10px;" onchange="setPlayerName()">
+        <input type="text" id="player-name-input" placeholder="Dein Name..." class="chat-input" style="width: 150px; max-width: calc(100vw - 40px); display: inline-block; padding: 8px 15px; margin-right: 10px; box-sizing: border-box;" onchange="setPlayerName()">
         <button id="restart-btn" onclick="requestRestart()" class="restart-btn">🔄 Spiel neu starten</button>
         <button onclick="toggleTheme()" class="theme-switch-btn">🌍 Modus: Realistisch</button>
         <button onclick="toggleSound()" id="sound-btn" class="theme-switch-btn" style="background: linear-gradient(135deg, #64748b, #475569);">🔊 Ton an</button>
