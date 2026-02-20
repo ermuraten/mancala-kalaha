@@ -29,9 +29,15 @@
             background: radial-gradient(circle at top left, #1e293b, var(--bg-color));
             color: var(--text-main); 
             margin: 0; 
-            padding: 20px 0 100px 0; 
+            padding: 0;
             min-height: 100%;
             overflow-y: auto;
+        }
+
+        .main-wrapper {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px 20px 120px 20px;
             position: relative;
         }
 
@@ -754,6 +760,13 @@
         }
 
     </style>
+    <script>
+        /* WebOS Magic Remote scroll polyfill */
+        document.addEventListener('wheel', function(e) {
+            var delta = e.deltaY || e.detail || (-e.wheelDelta);
+            window.scrollBy(0, delta);
+        }, { passive: true });
+    </script>
 </head>
 <body>
     <div class="realistic-bg">
@@ -775,8 +788,9 @@
         </svg>
     </div>
 
-    <h1>Mancala (Kalaha)</h1>
+    <div class="main-wrapper">
     <div class="connection-status"><span class="status-dot" id="status-dot"></span><span id="connection-text">Warte auf Server...</span></div>
+    <h1>Mancala (Kalaha)</h1>
     <div id="status">Warte auf Verbindung...</div>
     
     <div id="qrcode-container" style="display: none; text-align: center; background: rgba(255, 255, 255, 0.95); border-radius: 15px; padding: 20px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
@@ -832,6 +846,8 @@
             <li><b>Spielende:</b> Das Spiel ist vorbei, wenn einer von euch auf seiner Seite keine Steine mehr hat. Der andere Spieler darf dann alle Steine, die noch auf seiner Seite liegen, in seine Sammelmulde legen. Wer die meisten Steine hat, gewinnt!</li>
         </ul>
     </div>
+
+    </div><!-- /main-wrapper -->
 
     <!-- Chat Interface -->
     <div class="chat-container" id="chat-container">
