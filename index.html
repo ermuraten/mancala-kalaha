@@ -756,11 +756,7 @@
 
     <h1>Mancala (Kalaha)</h1>
     <div class="connection-status"><span class="status-dot" id="status-dot"></span><span id="connection-text">Warte auf Server...</span></div>
-    <div id="status">Verbindung wird initialisiert...</div>
-    <div id="qrcode-container" style="display:none; text-align: center; margin-top: 20px; background: white; padding: 20px; border-radius: 10px; width: fit-content; margin-left: auto; margin-right: auto;">
-        <h3 style="color: black; margin-top: 0;">1. Scanne diesen Code mit dem Handy<br>2. Tippe dort auf "Beitreten"</h3>
-        <div id="qrcode"></div>
-    </div>
+    <div id="status">Warte auf Verbindung...</div>
     <div id="game-event-osd" class="game-event-osd">Extrazug!</div>
     <div class="controls-area">
         <input type="text" id="player-name-input" placeholder="Dein Name..." class="chat-input" style="width: 150px; display: inline-block; padding: 8px 15px; margin-right: 10px;" onchange="setPlayerName()">
@@ -1529,100 +1525,13 @@
             updateSideVisuals();
         });
 
-        function broadcast(msg) {
-            if (conn && conn.open) {
-                conn.send(msg);
-            }
-        }
+        socket.on('syncBoard', (data) => {
+            currentBoard = [...data.board];
+            drawBoard(currentBoard);
+            updateStatus(data.currentPlayer, false);
+        });
 
-        // Host handles all game logic (acts as the old server.js)
-        function hostHandleMove(pitIndex) {
-            if (pitIndex < 0 || pitIndex > 13 || pitIndex === 6 || pitIndex === 13) return;
-            if (pitIndex < 6 && playerTurn !== 0) return;
-            if (pitIndex > 6 && playerTurn !== 1) return;
-            
-            let stones = currentBoard[pitIndex];
-            if (stones === 0) return;
-
-            let path = [];
-            currentBoard[pitIndex] = 0;
-            let currentIndex = pitIndex;
-
-            while (stones > 0) {
-                currentIndex = (currentIndex + 1) % 14;
-                if ((playerTurn === 0 && currentIndex === 13) || (playerTurn === 1 && currentIndex === 6)) {
-                    continue;
-                }
-                currentBoard[currentIndex]++;
-                path.push(currentIndex);
-                stones--;
-            }
-
-            let freeTurn = false;
-            let capture = null;
-
-            if (playerTurn === 0 && currentIndex === 6) freeTurn = true;
-            if (playerTurn === 1 && currentIndex === 13) freeTurn = true;
-
-            let isOwnSide = (playerTurn === 0 && currentIndex < 6) || (playerTurn === 1 && currentIndex > 6 && currentIndex < 13);
-            if (isOwnSide && currentBoard[currentIndex] === 1 && currentBoard[12 - currentIndex] > 0 && !freeTurn) {
-                let capturedStones = currentBoard[12 - currentIndex];
-                let toKalaha = playerTurn === 0 ? 6 : 13;
-                
-                capture = {
-                    ownPit: currentIndex,
-                    fromPit: 12 - currentIndex,
-                    toKalaha: toKalaha,
-                    capturedAmount: capturedStones
-                };
-                
-                currentBoard[toKalaha] += (capturedStones + 1);
-                currentBoard[currentIndex] = 0;
-                currentBoard[12 - currentIndex] = 0;
-            }
-
-            let p1Empty = true;
-            for (let i = 0; i < 6; i++) if (currentBoard[i] > 0) p1Empty = false;
-            let p2Empty = true;
-            for (let i = 7; i < 13; i++) if (currentBoard[i] > 0) p2Empty = false;
-
-            let gameOver = false;
-            if (p1Empty || p2Empty) {
-                gameOver = true;
-                for (let i = 0; i < 6; i++) {
-                    currentBoard[6] += currentBoard[i];
-                    currentBoard[i] = 0;
-                }
-                for (let i = 7; i < 13; i++) {
-                    currentBoard[13] += currentBoard[i];
-                    currentBoard[i] = 0;
-                }
-            }
-
-            let nextPlayer = playerTurn;
-            if (!freeTurn && !gameOver) {
-                nextPlayer = playerTurn === 0 ? 1 : 0;
-            }
-            playerTurn = nextPlayer;
-
-            let syncData = {
-                type: 'animateMove',
-                startPit: pitIndex,
-                path: path,
-                finalBoard: currentBoard,
-                nextPlayer: nextPlayer,
-                freeTurn: freeTurn,
-                capture: capture,
-                gameOver: gameOver
-            };
-
-            // Play locally immediately if host
-            handleAnimation(syncData);
-            // Send to guest
-            broadcast(syncData);
-        }
-
-        async function handleAnimation(data) {
+        socket.on('animateMove', async (data) => {
             isAnimating = true;
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "Steine werden verteilt... 🔄";
@@ -1647,6 +1556,8 @@
 
             if (data.capture) {
                 await sleep(500);
+                
+                // Trigger Capture Event OSD if it's our capture (or the opponent's if we are watching)
                 let isMyCapture = (data.nextPlayer !== myPlayerIndex && data.nextPlayer !== -1);
                 let captureText = "💥 Gefangen!";
                 if (myPlayerIndex !== -1) {
@@ -1673,9 +1584,11 @@
 
             currentBoard = [...data.finalBoard];
             drawBoard(currentBoard);
-            playerTurn = data.nextPlayer;
             
+            // Trigger Extra Turn OSD
             if (data.freeTurn && !data.gameOver) {
+                // If the next player is the same as the one who just moved, it's a free turn.
+                // data.nextPlayer already has the correct player turn.
                 let isMyTurn = (data.nextPlayer === myPlayerIndex);
                 let freeTurnText = "⭐ Extra-Zug!";
                 if (myPlayerIndex !== -1) {
@@ -1687,7 +1600,7 @@
 
             isAnimating = false;
             updateStatus(data.nextPlayer, data.gameOver);
-        }
+        });
 
         let mobileSelectedPit = -1;
         let isTouchDevice = false;
@@ -1729,49 +1642,20 @@
                     
                     return; // Stop here, wait for second tap to confirm
                 } else {
-                    mobileSelectedPit = -1; 
+                    mobileSelectedPit = -1; // Reset on second tap and proceed
                     document.querySelectorAll('.pit').forEach(p => p.classList.remove('selected-pit'));
                     clearHover(true);
                 }
             }
 
-            // Either Request Host to play or execute locally if Host
-            if (isHost) {
-                hostHandleMove(pitIndex);
-            } else {
-                broadcast({ type: 'makeMove', pitIndex: pitIndex });
-            }
-        }
-
-        function hostRestart() {
-            for (let i = 0; i < 14; i++) {
-                currentBoard[i] = (i === 6 || i === 13) ? 0 : 4;
-            }
-            playerTurn = 0;
-            restartRequests = [false, false];
-            
-            let syncData = { type: 'syncBoard', board: currentBoard, currentPlayer: playerTurn };
-            handleSyncBoard(syncData);
-            broadcast(syncData);
-            broadcast({ type: 'restartStatus', requests: restartRequests });
-            updateRestartButton(restartRequests);
+            socket.emit('makeMove', pitIndex);
         }
 
         function requestRestart() {
-            if (isHost) {
-                restartRequests[0] = true;
-                if (restartRequests[0] && restartRequests[1]) {
-                    hostRestart();
-                } else {
-                    broadcast({ type: 'restartStatus', requests: restartRequests });
-                    updateRestartButton(restartRequests);
-                }
-            } else {
-                broadcast({ type: 'requestRestart' });
-            }
+            socket.emit('requestRestart');
         }
 
-        function updateRestartButton(requests) {
+        socket.on('restartStatus', (requests) => {
             const btn = document.getElementById('restart-btn');
             if (!btn || myPlayerIndex === -1) return;
             
@@ -1788,15 +1672,13 @@
                 btn.innerText = "🔄 Spiel neu starten";
                 btn.style.background = "rgba(255, 255, 255, 0.1)";
             }
-        }
+        });
 
         function setPlayerName() {
             const name = document.getElementById('player-name-input').value.trim();
             if (name) {
-                playerNames[myPlayerIndex] = name;
+                socket.emit('setName', name);
                 localStorage.setItem('mancalaName', name);
-                syncGameState();
-                broadcast({ type: 'playerNames', playerNames: playerNames });
             }
         }
 
@@ -1914,35 +1796,14 @@
             return emojiRegex.test(str) && !hasText.test(str);
         }
 
-        function handleChatKey(e) {
-            if (e.key === 'Enter') sendChat();
-        }
-
-        function sendChat() {
-            const input = document.getElementById('chat-input');
-            const msg = input.value.trim();
-            if (msg) {
-                let myName = myPlayerIndex >= 0 ? playerNames[myPlayerIndex] : 'Zuschauer';
-                let data = { type: 'chatMessage', text: msg, senderName: myName, playerIndex: myPlayerIndex };
-                
-                // Append locally immediately
-                appendChat(data, true);
-                // Broadcast
-                broadcast(data);
-                
-                input.value = '';
-                document.getElementById('emoji-picker').style.display = 'none';
-            }
-        }
-
-        function appendChat(data, isMe) {
+        socket.on('chatMessage', (data) => {
             const chatBox = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message');
             
             let isLargeEmoji = isOnlyEmojis(data.text);
 
-            if (isMe) {
+            if (data.id === socket.id) {
                 msgDiv.classList.add('mine');
                 if (isLargeEmoji) {
                     msgDiv.classList.add('large-emoji');
@@ -1950,6 +1811,12 @@
                 } else {
                     msgDiv.innerText = data.text;
                 }
+            } else if (data.id === 'server') {
+                msgDiv.style.background = "var(--glass-bg)";
+                msgDiv.style.color = "var(--text-muted)";
+                msgDiv.style.maxWidth = "100%";
+                msgDiv.style.textAlign = "center";
+                msgDiv.innerText = data.text;
             } else {
                 msgDiv.classList.add('theirs');
                 const name = data.senderName || (data.playerIndex >= 0 ? "Sp. " + (data.playerIndex + 1) : "Zuschauer");
@@ -1963,6 +1830,20 @@
             
             chatBox.appendChild(msgDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        function handleChatKey(e) {
+            if (e.key === 'Enter') sendChat();
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (msg) {
+                socket.emit('chatMessage', msg);
+                input.value = '';
+                document.getElementById('emoji-picker').style.display = 'none';
+            }
         }
 
         function toggleEmojiPicker() {
