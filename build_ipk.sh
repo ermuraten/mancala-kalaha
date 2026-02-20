@@ -13,9 +13,7 @@ rm -rf build_tmp
 mkdir -p build_tmp/data/$APP_DIR
 
 # Copy app files
-cp appinfo.json index.html *.js build_tmp/data/$APP_DIR/
-# Copy the icon folder
-cp -R icon build_tmp/data/$APP_DIR/
+cp appinfo.json index.html *.js *.png build_tmp/data/$APP_DIR/
 
 cd build_tmp
 

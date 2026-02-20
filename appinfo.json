@@ -5,7 +5,8 @@
     "type": "web",
     "main": "index.html",
     "title": "Mancala (Kalaha)",
-    "icon": "icon/icon.png",
+    "icon": "icon.png",
+    "largeIcon": "largeIcon.png",
     "bgColor": "#0f172a",
     "resolution": "1920x1080"
 }
