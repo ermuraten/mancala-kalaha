@@ -31,9 +31,6 @@
             margin: 0; 
             padding: 20px 0 100px 0; 
             min-height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             overflow-y: auto;
             position: relative;
         }
@@ -44,10 +41,25 @@
             -webkit-text-fill-color: transparent;
             font-weight: 800;
             font-size: 3rem;
-            margin-bottom: 5px;
+            margin: 0 auto 5px auto;
             text-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+            width: max-content;
         }
 
+        .controls-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 20px auto;
+            background: var(--glass-bg);
+            padding: 15px 30px;
+            border-radius: 25px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: max-content;
+        }
         #status { 
             font-size: 1.4em; 
             font-weight: 600; 
@@ -186,18 +198,19 @@
             transform: rotate(180deg) scale(1.2);
         }
 
-        .rules { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(10px);
+        .rules {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            padding: 30px 40px;
+            border-radius: 30px;
             border: 1px solid var(--glass-border);
-            max-width: 800px; 
-            margin: 40px auto; 
-            padding: 30px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
-            text-align: left; 
-            color: var(--text-muted);
-            line-height: 1.6;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            max-width: 800px;
+            margin: 40px auto 30px auto;
+            text-align: left;
+            line-height: 1.8;
+            font-size: 1.1em;
+            color: var(--text-main);
         }
         .rules h2 { 
             color: var(--text-main); 
@@ -1436,9 +1449,9 @@
                 let p1Score = currentBoard[6];
                 let p2Score = currentBoard[13];
                 if (p1Score > p2Score) {
-                    statusDiv.innerText = "🎉 Spieler 1 gewinnt! (" + p1Score + " zu " + p2Score + ")";
+                    statusDiv.innerText = "🎉 " + playerNames[0] + " gewinnt! (" + p1Score + " zu " + p2Score + ")";
                 } else if (p2Score > p1Score) {
-                    statusDiv.innerText = "🎉 Spieler 2 gewinnt! (" + p2Score + " zu " + p1Score + ")";
+                    statusDiv.innerText = "🎉 " + playerNames[1] + " gewinnt! (" + p2Score + " zu " + p1Score + ")";
                 } else {
                     statusDiv.innerText = "🤝 Unentschieden!";
                 }
