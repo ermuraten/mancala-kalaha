@@ -1,0 +1,11 @@
+{
+    "id": "com.murat.mancala",
+    "version": "1.0.0",
+    "vendor": "Murat",
+    "type": "web",
+    "main": "index.html",
+    "title": "Mancala (Kalaha)",
+    "icon": "icon/icon.png",
+    "bgColor": "#0f172a",
+    "resolution": "1920x1080"
+}
