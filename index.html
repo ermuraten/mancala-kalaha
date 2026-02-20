@@ -1374,9 +1374,11 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="peerjs.min.js"></script>
+    <script src="qrcode.min.js"></script>
+    <script src="webrtc_wrapper.js"></script>
     <script>
-        const socket = io();
+        // socket is globally available via webrtc_wrapper.js
         let myPlayerIndex = -1;
         let isAnimating = false;
         let currentBoard = [];
