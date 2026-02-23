@@ -404,7 +404,7 @@
             bottom: 40px; 
             right: 50px; 
             width: 330px; 
-            background: rgba(15, 23, 42, 0.9); 
+            background: rgba(15, 23, 42, 0.95); 
             backdrop-filter: blur(20px);
             border-radius: 20px; 
             box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
@@ -427,9 +427,39 @@
             justify-content: space-between; 
             align-items: center; 
             border-bottom: 1px solid var(--glass-border);
+            position: relative;
+            flex-shrink: 0;
         }
         .chat-header:hover {
             background: rgba(255,255,255,0.08);
+        }
+        /* Chat blink animation for new messages */
+        @keyframes chatBlink {
+            0%, 100% { background: rgba(255,255,255,0.05); }
+            50% { background: rgba(56, 189, 248, 0.3); }
+        }
+        .chat-header.blink {
+            animation: chatBlink 0.6s ease-in-out 3;
+        }
+        /* Unread badge */
+        .chat-unread-badge {
+            background: var(--accent-danger);
+            color: #fff;
+            font-size: 0.7em;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            margin-left: 8px;
+            box-shadow: 0 2px 8px rgba(248, 113, 113, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+        .chat-unread-badge.show {
+            display: inline-flex;
         }
         .chat-messages { 
             flex-grow: 1; 
@@ -440,6 +470,7 @@
             gap: 10px; 
             scrollbar-width: thin;
             scrollbar-color: var(--glass-border) transparent;
+            min-height: 0;
         }
         .chat-messages::-webkit-scrollbar { width: 6px; }
         .chat-messages::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
@@ -480,7 +511,10 @@
             border-top: 1px solid var(--glass-border); 
             display: flex; 
             gap: 10px; 
-            background: rgba(0,0,0,0.2); 
+            background: rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            box-sizing: border-box;
+            width: 100%;
         }
         .emoji-btn { 
             cursor: pointer; 
@@ -547,9 +581,15 @@
             flex-direction: column;
             gap: 15px;
             height: 200px;
+            min-height: 200px;
+            max-height: 200px;
             overflow-y: auto;
+            overflow-x: hidden;
             scrollbar-width: thin;
             scrollbar-color: var(--glass-border) transparent;
+            box-sizing: border-box;
+            width: 100%;
+            flex-shrink: 0;
         }
         #emoji-picker::-webkit-scrollbar { width: 6px; }
         #emoji-picker::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
@@ -563,12 +603,15 @@
             margin-bottom: 5px;
             text-align: left;
             padding-left: 5px;
+            flex-shrink: 0;
         }
         
         .emoji-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 5px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         /* --- REALISTIC MODE CSS --- */
@@ -757,10 +800,31 @@
                 bottom: 0;
                 border-radius: 20px 20px 0 0;
                 box-sizing: border-box;
+                max-height: 100vh;
+                max-height: 100dvh;
+            }
+            /* Mobile: expanded chat = fullscreen overlay */
+            .chat-container.mobile-expanded {
+                height: 100vh !important;
+                height: 100dvh !important;
+                border-radius: 0;
+                z-index: 2000;
+            }
+            .chat-container.mobile-expanded .chat-header {
+                padding: 18px 15px;
+                font-size: 1.2em;
+            }
+            .chat-container.mobile-expanded .chat-messages {
+                flex-grow: 1;
+                padding: 15px;
+            }
+            .chat-container.mobile-expanded .chat-input-area {
+                padding: 12px 15px;
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
             }
             .emoji-grid {
-                grid-template-columns: repeat(5, 1fr);
-                font-size: 1.5em;
+                grid-template-columns: repeat(6, 1fr);
+                font-size: 1.4em;
             }
             .connection-status {
                 position: fixed;
@@ -920,8 +984,8 @@
 
     <!-- Chat Interface -->
     <div class="chat-container" id="chat-container">
-        <div class="chat-header" onclick="toggleChat()">
-            <span>💬 Chat</span>
+        <div class="chat-header" id="chat-header" onclick="toggleChat()">
+            <span>💬 Chat <span class="chat-unread-badge" id="chat-unread-badge">0</span></span>
             <span id="chat-toggle-icon">▼</span>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
@@ -1497,12 +1561,65 @@
         let playerNames = ["Spieler 1", "Spieler 2"];
 
         let isSoundEnabled = true;
+        let chatUnreadCount = 0;
+        let isChatOpen = true; // track if chat is expanded
 
         // Web Audio API Context for stone drop sounds
         let audioCtx;
         function initAudio() {
             if (!audioCtx && isSoundEnabled) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Chat notification sound
+        function playChatNotificationSound() {
+            if (!isSoundEnabled || !audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+
+            // First note: bright ping
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(880, now);
+            osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+            gain1.gain.setValueAtTime(0.1, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.15);
+
+            // Second note: higher follow-up
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1320, now + 0.1);
+            gain2.gain.setValueAtTime(0.08, now + 0.1);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(now + 0.1);
+            osc2.stop(now + 0.25);
+        }
+
+        function triggerChatBlink() {
+            const header = document.getElementById('chat-header');
+            header.classList.remove('blink');
+            // Force reflow to restart animation
+            void header.offsetWidth;
+            header.classList.add('blink');
+        }
+
+        function updateUnreadBadge() {
+            const badge = document.getElementById('chat-unread-badge');
+            if (chatUnreadCount > 0) {
+                badge.textContent = chatUnreadCount > 99 ? '99+' : chatUnreadCount;
+                badge.classList.add('show');
+            } else {
+                badge.classList.remove('show');
             }
         }
 
@@ -1916,8 +2033,9 @@
             msgDiv.classList.add('message');
             
             let isLargeEmoji = isOnlyEmojis(data.text);
+            let isOwnMessage = (data.id === socket.id);
 
-            if (data.id === socket.id) {
+            if (isOwnMessage) {
                 msgDiv.classList.add('mine');
                 if (isLargeEmoji) {
                     msgDiv.classList.add('large-emoji');
@@ -1944,6 +2062,19 @@
             
             chatBox.appendChild(msgDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Sound + Blink for incoming messages (not own, not server)
+            if (!isOwnMessage && data.id !== 'server') {
+                initAudio();
+                playChatNotificationSound();
+                triggerChatBlink();
+
+                // Update unread count if chat is minimized
+                if (!isChatOpen) {
+                    chatUnreadCount++;
+                    updateUnreadBadge();
+                }
+            }
         });
 
         function handleChatKey(e) {
@@ -1960,19 +2091,25 @@
             }
         }
 
+        function isMobile() {
+            return window.innerWidth <= 800;
+        }
+
         function toggleEmojiPicker() {
             const picker = document.getElementById('emoji-picker');
             const chatContainer = document.getElementById('chat-container');
-            const chatMessages = document.getElementById('chat-messages');
 
-            if (picker.style.display === 'none') {
+            if (picker.style.display === 'none' || picker.style.display === '') {
                 picker.style.display = 'flex';
-                let newHeight = chatMessages.scrollHeight > 200 ? '550px' : '450px';
-                chatContainer.style.height = newHeight;
+                if (!isMobile()) {
+                    chatContainer.style.height = '580px';
+                }
                 setTimeout(() => picker.scrollTop = 0, 10);
             } else {
                 picker.style.display = 'none';
-                chatContainer.style.height = '380px';
+                if (!isMobile()) {
+                    chatContainer.style.height = '380px';
+                }
             }
         }
 
@@ -1985,13 +2122,47 @@
         function toggleChat() {
             const chatContainer = document.getElementById('chat-container');
             const icon = document.getElementById('chat-toggle-icon');
-            if (chatContainer.style.height === '55px') {
-                chatContainer.style.height = '380px';
-                icon.innerText = '▼';
+
+            if (isMobile()) {
+                // Mobile: toggle between minimized and fullscreen
+                if (chatContainer.classList.contains('mobile-expanded')) {
+                    chatContainer.classList.remove('mobile-expanded');
+                    chatContainer.style.height = '55px';
+                    icon.innerText = '▲';
+                    isChatOpen = false;
+                    document.getElementById('emoji-picker').style.display = 'none';
+                } else {
+                    chatContainer.classList.add('mobile-expanded');
+                    chatContainer.style.height = '';
+                    icon.innerText = '✕';
+                    isChatOpen = true;
+                    chatUnreadCount = 0;
+                    updateUnreadBadge();
+                    // Scroll to bottom
+                    setTimeout(() => {
+                        const chatBox = document.getElementById('chat-messages');
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                        document.getElementById('chat-input').focus();
+                    }, 100);
+                }
             } else {
-                chatContainer.style.height = '55px';
-                icon.innerText = '▲';
-                document.getElementById('emoji-picker').style.display = 'none';
+                // Desktop: toggle between minimized and normal
+                if (chatContainer.style.height === '55px') {
+                    chatContainer.style.height = '380px';
+                    icon.innerText = '▼';
+                    isChatOpen = true;
+                    chatUnreadCount = 0;
+                    updateUnreadBadge();
+                    setTimeout(() => {
+                        const chatBox = document.getElementById('chat-messages');
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }, 100);
+                } else {
+                    chatContainer.style.height = '55px';
+                    icon.innerText = '▲';
+                    isChatOpen = false;
+                    document.getElementById('emoji-picker').style.display = 'none';
+                }
             }
         }
 
